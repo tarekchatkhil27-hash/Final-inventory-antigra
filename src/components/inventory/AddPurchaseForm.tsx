@@ -23,7 +23,7 @@ interface PurchaseItem {
 }
 
 export function AddPurchaseForm({ isOpen, onClose }: AddPurchaseFormProps) {
-  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, addNotification, staff, setPurchases } = useGlobal();
+  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, addNotification, staff, purchases, setPurchases } = useGlobal();
   const { t } = useLanguage();
 
   // Header State
@@ -59,10 +59,14 @@ export function AddPurchaseForm({ isOpen, onClose }: AddPurchaseFormProps) {
 
   useEffect(() => {
     if (isOpen) {
-      setPoNumber(`PO-${Math.floor(100000 + Math.random() * 900000)}`);
-      setOrderDate(new Date().toISOString().split('T')[0]);
+      const now = new Date();
+      const monthStr = now.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const dateStr = now.getDate().toString().padStart(2, '0');
+      const serial = String((purchases?.length || 0) + 1).padStart(3, '0');
+      setPoNumber(`PO-${monthStr}-${dateStr}-${serial}`);
+      setOrderDate(now.toISOString().split('T')[0]);
     }
-  }, [isOpen]);
+  }, [isOpen, purchases]);
 
   // --- Filtering ---
   const filteredSuppliers = useMemo(() => {

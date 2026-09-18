@@ -179,7 +179,11 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
     setProducts(prev => [...newProducts, ...prev]);
 
-    const poNumber = `PO-${Math.floor(100000 + Math.random() * 900000)}`;
+    const now = new Date();
+    const monthStr = now.toLocaleString('default', { month: 'short' }).toUpperCase();
+    const dateStr = now.getDate().toString().padStart(2, '0');
+    const serial = String((purchases?.length || 0) + 1).padStart(3, '0');
+    const poNumber = `PO-${monthStr}-${dateStr}-${serial}`;
 
     if (dueAmount > 0 && supplierData.name) {
       const newPayable: Payable = {

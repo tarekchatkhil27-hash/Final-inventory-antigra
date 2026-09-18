@@ -8,7 +8,7 @@ import { InvoiceModal } from './InvoiceModal';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function NewSaleForm() {
-  const { products, setProducts, customers, setCustomers, setSales, setReceivables, setHistoryLogs, setTransactions, addNotification, businessSettings } = useGlobal();
+  const { products, setProducts, customers, setCustomers, sales, setSales, setReceivables, setHistoryLogs, setTransactions, addNotification, businessSettings } = useGlobal();
   const { t } = useLanguage();
 
   // Left Side: Products
@@ -197,9 +197,15 @@ export function NewSaleForm() {
       }
     }
 
+    const now = new Date();
+    const monthStr = now.toLocaleString('default', { month: 'short' }).toUpperCase();
+    const dateStr = now.getDate().toString().padStart(2, '0');
+    const serial = String((sales?.length || 0) + 1).padStart(3, '0');
+    const invoiceId = `INV-${monthStr}-${dateStr}-${serial}`;
+
     // Create Sale Record
     const newSale: SaleRecord = {
-      id: `INV-${Date.now()}`,
+      id: invoiceId,
       date: new Date().toISOString(),
       items: [...cart],
       subtotal,
