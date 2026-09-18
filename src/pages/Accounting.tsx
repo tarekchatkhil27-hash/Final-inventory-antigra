@@ -266,74 +266,74 @@ export function Accounting() {
       </div>
 
       {/* Financial Overview Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('Gross Revenue')}</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(grossRevenue)}</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">{t('Gross Revenue')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1 break-words">{formatCurrency(grossRevenue)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
-                <DollarSign className="h-6 w-6" />
+              <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <DollarSign className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('COGS')}</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(cogs)}</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">{t('COGS')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1 break-words">{formatCurrency(cogs)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                <Package className="h-6 w-6" />
+              <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                <Package className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('Total Expenses')}</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(totalExpenses)}</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">{t('Total Expenses')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1 break-words">{formatCurrency(totalExpenses)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">
-                <TrendingDown className="h-6 w-6" />
+              <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">
+                <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('Net Income')}</p>
-                <p className={cn("text-2xl font-bold mt-1", netIncome >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">{t('Net Income')}</p>
+                <p className={cn("text-lg sm:text-2xl font-bold mt-1 break-words", netIncome >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                   {formatCurrency(netIncome)}
                 </p>
               </div>
-              <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", netIncome >= 0 ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400")}>
-                {netIncome >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
+              <div className={cn("h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center", netIncome >= 0 ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400")}>
+                {netIncome >= 0 ? <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" /> : <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card className="col-span-2 sm:col-span-1 lg:col-span-1">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('Total Assets')}</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(totalAssets)}</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">{t('Total Assets')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-50 mt-1 break-words">{formatCurrency(totalAssets)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                <Wallet className="h-6 w-6" />
+              <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <Wallet className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
             </div>
           </CardContent>
