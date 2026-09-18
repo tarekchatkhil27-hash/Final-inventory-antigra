@@ -8,6 +8,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { CashBox } from '../components/accounting/CashBox';
 import { CreditBook } from '../components/accounting/CreditBook';
 import { TransactionsList } from '../components/accounting/TransactionsList';
@@ -16,7 +18,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export function Accounting() {
   const [activeView, setActiveView] = useState<'main' | 'income_statement' | 'cash_box' | 'credit_book' | 'transactions' | 'financial_reports'>('main');
-  const { products, sales, transactions } = useGlobal();
+  const { products, sales, transactions, businessSettings } = useGlobal();
   const { t } = useLanguage();
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
 
@@ -143,8 +145,98 @@ export function Accounting() {
   }
 
   // --- Export ---
-  const handleExport = () => {
-    alert(t("Financial Report PDF generation would trigger here."));
+  const handleDownloadReport = () => {
+    const doc = new jsPDF();
+    
+    // Business Header
+    doc.setFontSize(24);
+    doc.setTextColor(79, 70, 229); // Indigo 600
+    doc.text(businessSettings.businessName, 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    if (businessSettings.ownerName) {
+      doc.text(`${t('Owner')}: ${businessSettings.ownerName}`, 14, 28);
+      doc.text(businessSettings.phone, 14, 33);
+      doc.text(businessSettings.address, 14, 38);
+    } else {
+      doc.text(businessSettings.phone, 14, 28);
+      doc.text(businessSettings.address, 14, 33);
+    }
+    
+    // Report Title
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42); // Slate 900
+    doc.text(t('Income Statement'), 14, 50);
+    doc.setFontSize(10);
+    doc.text(`${t('Date Generated')}: ${new Date().toLocaleDateString()}`, 14, 57);
+    doc.text(`${t('Time Range')}: ${t(timeRange.charAt(0).toUpperCase() + timeRange.slice(1))}`, 14, 62);
+    
+    let currentY = 75;
+
+    // Income Section
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(t('Income'), 14, currentY);
+    doc.setFont('helvetica', 'normal');
+    
+    autoTable(doc, {
+      startY: currentY + 5,
+      body: [
+        [t('Sales Revenue'), formatCurrency(grossRevenue)],
+        [t('Cost of Goods Sold (COGS)'), `-${formatCurrency(cogs)}`],
+      ],
+      foot: [
+        [t('Gross Profit'), formatCurrency(grossProfit)]
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 2 },
+      footStyles: { fontStyle: 'bold', textColor: [15, 23, 42] },
+      columnStyles: { 1: { halign: 'right' } }
+    });
+    
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Expenses Section
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(t('Operating Expenses'), 14, currentY);
+    doc.setFont('helvetica', 'normal');
+
+    const expenseRows = Object.entries(expensesByCategory).map(([cat, amt]) => [
+      cat, `-${formatCurrency(amt as number)}`
+    ]);
+
+    if (expenseRows.length === 0) {
+      expenseRows.push([t('No expenses recorded.'), '']);
+    }
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      body: expenseRows,
+      foot: [
+        [t('Total Expenses'), `-${formatCurrency(totalExpenses)}`]
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 2 },
+      footStyles: { fontStyle: 'bold', textColor: [15, 23, 42] },
+      columnStyles: { 1: { halign: 'right' } }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Net Profit Section
+    autoTable(doc, {
+      startY: currentY,
+      body: [
+        [t('Net Profit'), formatCurrency(netIncome)]
+      ],
+      theme: 'plain',
+      styles: { fontSize: 12, cellPadding: 3, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' } }
+    });
+
+    doc.save(`income-statement-${timeRange}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   if (activeView === 'cash_box') {
@@ -279,11 +371,7 @@ export function Accounting() {
             <option value="year">{t('This Year')}</option>
             <option value="all">{t('All Time')}</option>
           </select>
-          <Button variant="outline" onClick={handleExport}>
-            <FileText className="mr-2 h-4 w-4" />
-            {t('Export Ledger')}
-          </Button>
-          <Button onClick={handleExport}>
+          <Button onClick={handleDownloadReport}>
             <Download className="mr-2 h-4 w-4" />
             {t('Download Report')}
           </Button>
