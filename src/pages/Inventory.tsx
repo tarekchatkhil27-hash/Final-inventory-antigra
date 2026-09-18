@@ -73,13 +73,57 @@ export function Inventory() {
     }
   };
 
+  const CSV_HEADERS = ['SKU', 'Name', 'Brand', 'Category', 'Size', 'Color', 'Design', 'Price', 'Cost', 'Quantity', 'MinThreshold'];
+
+  const escapeCSV = (value: any) => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const parseCSVLine = (text: string) => {
+    const result = [];
+    let cell = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"' && text[i+1] === '"') {
+        cell += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(cell);
+        cell = '';
+      } else {
+        cell += char;
+      }
+    }
+    result.push(cell);
+    return result;
+  };
+
   // CSV Export
   const exportCSV = () => {
-    const headers = ['SKU', 'Name', 'Category', 'Price', 'Cost', 'Quantity', 'MinThreshold'];
     const csvContent = [
-      headers.join(','),
+      CSV_HEADERS.join(','),
       ...filteredProducts.map(p => 
-        [p.sku, `"${p.name}"`, p.category, p.price, p.cost, p.quantity, p.minThreshold].join(',')
+        [
+          escapeCSV(p.sku), 
+          escapeCSV(p.name), 
+          escapeCSV(p.brand || ''), 
+          escapeCSV(p.category), 
+          escapeCSV(p.size || ''), 
+          escapeCSV(p.color || ''), 
+          escapeCSV(p.design || ''), 
+          escapeCSV(p.price), 
+          escapeCSV(p.cost), 
+          escapeCSV(p.quantity), 
+          escapeCSV(p.minThreshold)
+        ].join(',')
       )
     ].join('\n');
 
@@ -102,29 +146,62 @@ export function Inventory() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const lines = text.split('\n');
+      // Split by newlines, handling both \n and \r\n
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
       if (lines.length > 1) {
         const newProducts: Product[] = [];
-        // Skip header row
+        
+        // Parse headers to map indexes dynamically
+        const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+        
+        const getIndex = (key: string) => headers.indexOf(key.toLowerCase());
+        const skuIdx = getIndex('SKU');
+        const nameIdx = getIndex('Name');
+        const brandIdx = getIndex('Brand');
+        const categoryIdx = getIndex('Category');
+        const sizeIdx = getIndex('Size');
+        const colorIdx = getIndex('Color');
+        const designIdx = getIndex('Design');
+        const priceIdx = getIndex('Price');
+        const costIdx = getIndex('Cost');
+        const qtyIdx = getIndex('Quantity');
+        const minIdx = getIndex('MinThreshold');
+
+        if (skuIdx === -1 || nameIdx === -1) {
+          alert(t('Invalid CSV format. Required columns missing (SKU, Name). Please use the sample CSV format.'));
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+
         for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
+          const line = lines[i];
+          if (!line.trim()) continue;
           
-          // Simple CSV parser (doesn't handle commas inside quotes perfectly, but works for basic cases)
-          const values = line.split(',');
-          if (values.length >= 7) {
-            newProducts.push({
-              id: `P${Date.now()}-${i}`,
-              sku: values[0],
-              name: values[1].replace(/"/g, ''),
-              category: values[2],
-              price: parseFloat(values[3]) || 0,
-              cost: parseFloat(values[4]) || 0,
-              quantity: parseInt(values[5], 10) || 0,
-              minThreshold: parseInt(values[6], 10) || 0,
-              lastRestocked: new Date().toISOString()
-            });
-          }
+          const values = parseCSVLine(line);
+          
+          // Safety fallback if the row is somehow incomplete
+          const getValue = (idx: number) => idx !== -1 && values[idx] ? values[idx].trim() : '';
+
+          const sku = getValue(skuIdx) || `PRD-${Math.floor(100000 + Math.random() * 900000)}`;
+          const name = getValue(nameIdx);
+          
+          if (!name) continue; // Name is fundamentally required
+
+          newProducts.push({
+            id: `P${Date.now()}-${i}`,
+            sku,
+            name,
+            brand: getValue(brandIdx),
+            category: getValue(categoryIdx) || 'Uncategorized',
+            size: getValue(sizeIdx),
+            color: getValue(colorIdx),
+            design: getValue(designIdx),
+            price: parseFloat(getValue(priceIdx)) || 0,
+            cost: parseFloat(getValue(costIdx)) || 0,
+            quantity: parseInt(getValue(qtyIdx), 10) || 0,
+            minThreshold: parseInt(getValue(minIdx), 10) || 5,
+            lastRestocked: new Date().toISOString()
+          });
         }
         
         if (newProducts.length > 0) {
@@ -138,16 +215,22 @@ export function Inventory() {
             user: 'Admin'
           }, ...prev]);
           alert(`${t('Successfully imported')} ${newProducts.length} ${t('products')}.`);
+        } else {
+          alert(t('No valid products found in the CSV.'));
         }
+      } else {
+        alert(t('The CSV file is empty or missing data rows.'));
       }
     };
     reader.readAsText(file);
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const downloadSampleCSV = () => {
-    const content = "SKU,Name,Category,Price,Cost,Quantity,MinThreshold\nPRD-123456,Sample Product,Electronics,99.99,50.00,100,10";
+    const content = [
+      CSV_HEADERS.join(','),
+      'PRD-123456,Sample Product,TechCorp,Electronics,L,Black,Modern,99.99,50.00,100,10'
+    ].join('\n');
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
