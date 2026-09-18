@@ -60,20 +60,17 @@ export function Dashboard() {
     let totalCogs = 0;
     filteredSales.forEach(sale => {
       sale.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          totalCogs += product.cost * item.quantity;
-        }
+        totalCogs += item.cost * item.quantity;
       });
     });
     // Remove mock COGS for mock sales since we removed mock data
     return totalCogs;
-  }, [filteredSales, products, filteredTransactions]);
+  }, [filteredSales]);
 
   const netProfit = totalRevenue - cogs - totalExpenses;
 
   const totalStockValue = useMemo(() => {
-    return products.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
+    return products.reduce((sum, p) => sum + ((p.movingAverageCost || p.cost) * p.quantity), 0);
   }, [products]);
 
   const lowStockProducts = products.filter(p => p.quantity <= p.minThreshold);

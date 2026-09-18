@@ -110,6 +110,23 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   const [rosters, setRosters] = useLocalStorage<Roster[]>('app_rosters', []);
   const [payroll, setPayroll] = useLocalStorage<Payroll[]>('app_payroll', []);
   const [notifications, setNotifications] = useLocalStorage<AppNotification[]>('app_notifications', []);
+  useEffect(() => {
+    let needsUpdate = false;
+    const updatedProducts = products.map(p => {
+      if (p.movingAverageCost === undefined || !p.costHistory) {
+        needsUpdate = true;
+        return {
+          ...p,
+          movingAverageCost: p.cost,
+          costHistory: [{ date: p.lastRestocked || new Date().toISOString(), cost: p.cost, quantity: p.quantity }]
+        };
+      }
+      return p;
+    });
+    if (needsUpdate) {
+      setProducts(updatedProducts);
+    }
+  }, [products, setProducts]);
 
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => {
     const newNotification: AppNotification = {

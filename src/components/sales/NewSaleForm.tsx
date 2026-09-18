@@ -77,7 +77,7 @@ export function NewSaleForm() {
         productId: product.id,
         name: product.name,
         price: product.price,
-        cost: product.cost,
+        cost: product.movingAverageCost || product.cost,
         quantity: 1,
         discount: 0,
         discountType: 'percent'
@@ -379,9 +379,19 @@ export function NewSaleForm() {
                   {product.brand && <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">{product.brand}</p>}
                   <h3 className="text-sm font-medium text-slate-900 dark:text-slate-50 line-clamp-2 leading-tight">{product.name}</h3>
                 </div>
-                <div className="mt-auto pt-2 flex items-end justify-between">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(product.price)}</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{product.quantity} {t('in stock')}</span>
+                <div className="mt-auto pt-2 space-y-1">
+                  <div className="flex items-end justify-between">
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(product.price)}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{product.quantity} {t('in stock')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/50">
+                    <span title={t('Moving Average Cost')}>MAC: {formatCurrency(product.movingAverageCost || product.cost)}</span>
+                    {product.costHistory && product.costHistory.length > 0 && (
+                      <span className="text-orange-500/80 truncate max-w-[80px]" title={t('Recent Prices')}>
+                        {[...new Set(product.costHistory.map(h => h.cost))].slice(0, 3).map(c => formatCurrency(c)).join('/')}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

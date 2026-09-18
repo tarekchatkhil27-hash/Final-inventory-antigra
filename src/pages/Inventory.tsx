@@ -365,9 +365,9 @@ export function Inventory() {
                       <td className="px-4 py-4">{product.sku}</td>
                       <td className="px-4 py-4">{product.category || '-'}</td>
                       <td className="px-4 py-4">{formatCurrency(product.price)}</td>
-                      <td className="px-4 py-4">{formatCurrency(product.cost)}</td>
+                      <td className="px-4 py-4">{formatCurrency(product.movingAverageCost || product.cost)}</td>
                       <td className="px-4 py-4">{product.quantity}</td>
-                      <td className="px-4 py-4 font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(product.cost * product.quantity)}</td>
+                      <td className="px-4 py-4 font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency((product.movingAverageCost || product.cost) * product.quantity)}</td>
                       <td className="px-4 py-4 text-xs">
                         {formatDate(product.lastRestocked)}<br/>
                         <span className="text-slate-400">{new Date(product.lastRestocked).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -433,8 +433,8 @@ export function Inventory() {
                   </div>
                   <div className="col-span-2 flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <div>
-                      <span className="text-slate-500 block text-xs">{t('Total Cost')}</span>
-                      <span className="font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(product.cost * product.quantity)}</span>
+                      <span className="text-slate-500 block text-xs">{t('Total Cost (MAC)')}</span>
+                      <span className="font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency((product.movingAverageCost || product.cost) * product.quantity)}</span>
                     </div>
                     {getStatusBadge(product.quantity, product.minThreshold)}
                   </div>

@@ -42,10 +42,24 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(prev => ({ ...prev, sku: `PRD-${Math.floor(100000 + Math.random() * 900000)}` }));
+      const now = new Date();
+      const monthStr = now.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const dateStr = now.getDate().toString().padStart(2, '0');
+      const batchSerial = String((purchases?.length || 0) + 1).padStart(3, '0');
+      const autoBatch = `${monthStr}-${dateStr}-${batchSerial}`;
+      
+      setBatchData(prev => ({ ...prev, batchNumber: autoBatch }));
+      setFormData(prev => ({ ...prev, sku: '' })); // Let name effect handle it
     }
-  }, [isOpen]);
+  }, [isOpen, purchases]);
 
+  useEffect(() => {
+    if (formData.name && isOpen) {
+      const namePrefix = formData.name.substring(0, 3).toUpperCase().padEnd(3, 'X');
+      const serial = String(products.length + productsToAdd.length + 1).padStart(3, '0');
+      setFormData(prev => ({ ...prev, sku: `${namePrefix}-${serial}` }));
+    }
+  }, [formData.name, isOpen, products.length, productsToAdd.length]);
   const filteredSuppliers = useMemo(() => {
     if (!supplierData.name) return [];
     return suppliers.filter(s => s.name.toLowerCase().includes(supplierData.name.toLowerCase()));
@@ -85,7 +99,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
     }
     setProductsToAdd(prev => [...prev, { ...formData, id: `P${Date.now()}-${Math.random()}` }]);
     setFormData({
-      name: '', sku: `PRD-${Math.floor(100000 + Math.random() * 900000)}`, brand: '', category: '', size: '', color: '', design: '',
+      name: '', sku: '', brand: '', category: '', size: '', color: '', design: '',
       price: '', cost: '', quantity: '', unit: '', minThreshold: '',
       discount: '', discountType: 'percent'
     });
@@ -124,10 +138,6 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       alert(t('Please add at least one product.'));
       return;
     }
-    if (!supplierData.name) {
-      alert(t('Supplier Name is required.'));
-      return;
-    }
     setShowConfirmation(true);
   };
 
@@ -156,6 +166,8 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       design: p.design,
       price: parseFloat(p.price),
       cost: parseFloat(p.cost),
+      movingAverageCost: parseFloat(p.cost),
+      costHistory: [{ date: new Date().toISOString(), cost: parseFloat(p.cost), quantity: parseInt(p.quantity, 10) }],
       quantity: parseInt(p.quantity, 10),
       unit: p.unit,
       minThreshold: parseInt(p.minThreshold || '5', 10),

@@ -183,10 +183,26 @@ export function ProductDetailsModal({ product, isOpen, onClose, onDelete }: Prod
                       <div className="flex items-start gap-3">
                         <DollarSign className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-50">{formatCurrency(product.cost)}</p>
-                          <p className="text-xs text-slate-500">{t('Purchase Price (Cost)')}</p>
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-50">{formatCurrency(product.movingAverageCost || product.cost)}</p>
+                          <p className="text-xs text-slate-500">{t('Moving Average Cost (MAC)')}</p>
                         </div>
                       </div>
+                      
+                      {product.costHistory && product.costHistory.length > 0 && (
+                        <div className="flex items-start gap-3">
+                          <DollarSign className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                              {/* Show up to 3 latest unique prices */}
+                              {[...new Set(product.costHistory.map(h => h.cost))]
+                                .slice(0, 3)
+                                .map(c => formatCurrency(c))
+                                .join(' / ')}
+                            </p>
+                            <p className="text-xs text-slate-500">{t('Recent Purchase Prices')}</p>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-start gap-3">
                         <div className={`h-5 w-5 shrink-0 mt-0.5 rounded-full flex items-center justify-center ${product.quantity <= product.minThreshold ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                           <Package className="h-3 w-3" />
@@ -199,8 +215,8 @@ export function ProductDetailsModal({ product, isOpen, onClose, onDelete }: Prod
                       <div className="flex items-start gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                         <DollarSign className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(product.cost * product.quantity)}</p>
-                          <p className="text-xs text-slate-500">{t('Total Cost (Cost × Stock)')}</p>
+                          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency((product.movingAverageCost || product.cost) * product.quantity)}</p>
+                          <p className="text-xs text-slate-500">{t('Total Cost (MAC × Stock)')}</p>
                         </div>
                       </div>
                     </div>

@@ -44,16 +44,13 @@ export function Accounting() {
     // From actual sales records
     filteredSales.forEach(sale => {
       sale.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          totalCogs += product.cost * item.quantity;
-        }
+        totalCogs += item.cost * item.quantity;
       });
     });
     // Remove mock COGS for mock sales since we removed mock data
     
     return totalCogs;
-  }, [filteredSales, products, filteredTransactions]);
+  }, [filteredSales]);
 
   // 3. Total Expenses
   const expensesByCategory = useMemo(() => {
@@ -78,7 +75,7 @@ export function Accounting() {
 
   // 5. Total Assets
   const stockValue = useMemo(() => {
-    return products.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
+    return products.reduce((sum, p) => sum + ((p.movingAverageCost || p.cost) * p.quantity), 0);
   }, [products]);
   
     // Calculate liquid cash based on transactions

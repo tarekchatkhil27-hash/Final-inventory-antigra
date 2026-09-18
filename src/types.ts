@@ -19,6 +19,8 @@ export interface Product {
   design?: string;
   price: number;
   cost: number;
+  movingAverageCost?: number;
+  costHistory?: { date: string; cost: number; quantity: number }[];
   quantity: number;
   unit: string;
   minThreshold: number;

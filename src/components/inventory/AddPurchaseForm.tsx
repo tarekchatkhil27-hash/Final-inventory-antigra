@@ -169,11 +169,6 @@ export function AddPurchaseForm({ isOpen, onClose }: AddPurchaseFormProps) {
       return;
     }
 
-    if (!supplierData.name) {
-      alert(t("Supplier Name is required."));
-      return;
-    }
-
     const paidAmt = paymentOption === 'full' ? grandTotal : parseFloat(paidAmount || '0');
     if (paidAmt < 0 || paidAmt > grandTotal) {
       alert(t("Invalid paid amount."));
@@ -189,36 +184,54 @@ export function AddPurchaseForm({ isOpen, onClose }: AddPurchaseFormProps) {
     let finalSupplierId = '';
 
     // Handle Supplier
-    const existingSupplier = suppliers.find(s => s.name.toLowerCase() === supplierData.name.toLowerCase());
-    if (existingSupplier) {
-      finalSupplierId = existingSupplier.id;
-    } else if (supplierData.saveSupplier) {
-      const newSupplier: Supplier = {
-        id: `S${Date.now()}`,
-        name: supplierData.name,
-        mobile: supplierData.mobile,
-      };
-      setSuppliers(prev => [...prev, newSupplier]);
-      finalSupplierId = newSupplier.id;
+    if (supplierData.name) {
+      const existingSupplier = suppliers.find(s => s.name.toLowerCase() === supplierData.name.toLowerCase());
+      if (existingSupplier) {
+        finalSupplierId = existingSupplier.id;
+      } else if (supplierData.saveSupplier) {
+        const newSupplier: Supplier = {
+          id: `S${Date.now()}`,
+          name: supplierData.name,
+          mobile: supplierData.mobile,
+        };
+        setSuppliers(prev => [...prev, newSupplier]);
+        finalSupplierId = newSupplier.id;
+      }
     }
 
     // Update Inventory (Add quantities & update cost)
     setProducts(prev => prev.map(p => {
       const purchasedItem = purchaseItems.find(item => item.productId === p.id);
       if (purchasedItem) {
+        const currentQty = p.quantity;
+        const currentMac = p.movingAverageCost || p.cost;
+        const newQty = purchasedItem.quantity;
+        const newUnitCost = purchasedItem.unitCost;
+        const totalNewQty = currentQty + newQty;
+        
+        let newMac = newUnitCost;
+        if (totalNewQty > 0) {
+          newMac = ((currentQty * currentMac) + (newQty * newUnitCost)) / totalNewQty;
+        }
+
+        const newHistoryItem = { date: new Date().toISOString(), cost: newUnitCost, quantity: newQty };
+        const updatedHistory = [newHistoryItem, ...(p.costHistory || [])];
+
         const newBatch = {
           id: `BATCH-${Date.now()}-${p.id}`,
           batchNumber: batchNumber || `PO-${poNumber}`,
-          quantity: purchasedItem.quantity,
-          cost: purchasedItem.unitCost,
+          quantity: newQty,
+          cost: newUnitCost,
           addedBy: addedBy || 'System',
           date: new Date().toISOString(),
           supplierId: finalSupplierId || undefined,
         };
         return { 
           ...p, 
-          quantity: p.quantity + purchasedItem.quantity,
-          cost: purchasedItem.unitCost, // Update to latest cost
+          quantity: totalNewQty,
+          cost: newUnitCost, // Keep latest cost for reference
+          movingAverageCost: newMac,
+          costHistory: updatedHistory,
           lastRestocked: new Date().toISOString(),
           batches: [...(p.batches || []), newBatch]
         };
