@@ -3,13 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/Button';
 import { useGlobal } from '../context/GlobalContext';
 import { User, UserRole } from '../types';
-import { Save, Plus, Edit2, Trash2, Shield, Building2, Receipt, UserCircle } from 'lucide-react';
+import { Save, Plus, Edit2, Trash2, Shield, Building2, Receipt, UserCircle, X } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export function Settings() {
-  const { users, setUsers, businessSettings, setBusinessSettings, addNotification } = useGlobal();
+  const { users, setUsers, businessSettings, setBusinessSettings, categories, setCategories, addNotification } = useGlobal();
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'financial'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'financial' | 'categories'>('general');
+  const [newCategory, setNewCategory] = useState('');
+  const [editingCategory, setEditingCategory] = useState<{old: string, new: string} | null>(null);
 
   // General Settings State
   const [generalForm, setGeneralForm] = useState(businessSettings);
@@ -157,6 +159,17 @@ export function Settings() {
           >
             <Receipt className="w-5 h-5" />
             {t('Tax & Financial')}
+          </button>
+          <button
+            onClick={() => setActiveTab('categories' as any)}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
+              activeTab === 'categories' as any
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Edit2 className="w-5 h-5" />
+            {t('Category Settings')}
           </button>
         </div>
 
@@ -449,6 +462,110 @@ export function Settings() {
                 </Card>
               )}
             </div>
+          )}
+
+          {activeTab === 'categories' && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{t('Category Settings')}</CardTitle>
+                    <CardDescription>{t('Manage product categories for your inventory.')}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder={t('Add new category...')}
+                    className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (!newCategory.trim()) return;
+                      if (categories.includes(newCategory.trim())) {
+                        addNotification({ title: t('Error'), message: t('Category already exists.'), type: 'error' });
+                        return;
+                      }
+                      setCategories([...categories, newCategory.trim()]);
+                      setNewCategory('');
+                      addNotification({ title: t('Success'), message: t('Category added.'), type: 'success' });
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('Add')}
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {categories.map((cat, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                      {editingCategory?.old === cat ? (
+                        <input
+                          type="text"
+                          value={editingCategory.new}
+                          onChange={(e) => setEditingCategory({ ...editingCategory, new: e.target.value })}
+                          className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm bg-white dark:border-slate-700 dark:bg-slate-950 mr-2"
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{cat}</span>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        {editingCategory?.old === cat ? (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                if (!editingCategory.new.trim()) return;
+                                const newCats = [...categories];
+                                const catIndex = newCats.indexOf(cat);
+                                newCats[catIndex] = editingCategory.new.trim();
+                                setCategories(newCats);
+                                setEditingCategory(null);
+                                addNotification({ title: t('Success'), message: t('Category updated.'), type: 'success' });
+                              }}
+                              className="text-emerald-600 hover:bg-emerald-50"
+                            >
+                              <Save className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingCategory(null)}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingCategory({ old: cat, new: cat })}>
+                              <Edit2 className="w-4 h-4 text-slate-500" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                if(window.confirm(t('Delete this category?'))) {
+                                  setCategories(categories.filter(c => c !== cat));
+                                  addNotification({ title: t('Success'), message: t('Category deleted.'), type: 'success' });
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {categories.length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-4">{t('No categories found.')}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

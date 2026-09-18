@@ -13,7 +13,7 @@ interface AddProductModalProps {
 }
 
 export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
-  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, staff, addNotification, setPurchases } = useGlobal();
+  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, staff, addNotification, setPurchases, categories } = useGlobal();
   const { t } = useLanguage();
 
   const [productsToAdd, setProductsToAdd] = useState<any[]>([]);
@@ -22,7 +22,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
   const [formData, setFormData] = useState({
     name: '', sku: '', brand: '', category: '', size: '', color: '', design: '',
-    price: '', cost: '', quantity: '', minThreshold: '',
+    price: '', cost: '', quantity: '', unit: '', minThreshold: '',
     discount: '', discountType: 'percent' as 'percent' | 'flat'
   });
 
@@ -79,14 +79,14 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   };
 
   const handleAddProductToList = () => {
-    if (!formData.name || !formData.sku || !formData.price || !formData.cost || !formData.quantity) {
+    if (!formData.name || !formData.sku || !formData.price || !formData.cost || !formData.quantity || !formData.unit) {
       alert(t('Please fill in all required product fields.'));
       return;
     }
     setProductsToAdd(prev => [...prev, { ...formData, id: `P${Date.now()}-${Math.random()}` }]);
     setFormData({
       name: '', sku: `PRD-${Math.floor(100000 + Math.random() * 900000)}`, brand: '', category: '', size: '', color: '', design: '',
-      price: '', cost: '', quantity: '', minThreshold: '',
+      price: '', cost: '', quantity: '', unit: '', minThreshold: '',
       discount: '', discountType: 'percent'
     });
   };
@@ -157,6 +157,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       price: parseFloat(p.price),
       cost: parseFloat(p.cost),
       quantity: parseInt(p.quantity, 10),
+      unit: p.unit,
       minThreshold: parseInt(p.minThreshold || '5', 10),
       batchNumber: batchData.batchNumber,
       addedBy: batchData.addedBy,
@@ -300,7 +301,12 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('Category')}</label>
-                <input name="category" value={formData.category} onChange={handleInputChange} className="w-full px-3 py-1.5 text-sm focus:ring-2 dark: dark: border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50" />
+                <select name="category" value={formData.category} onChange={handleInputChange} className="w-full px-3 py-1.5 text-sm focus:ring-2 border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50">
+                  <option value="">{t('Select Category')}</option>
+                  {categories.map((cat, idx) => (
+                    <option key={idx} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('Purchase Price (Cost)')} *</label>
@@ -313,6 +319,17 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('Quantity')} *</label>
                 <input type="number" min="1" name="quantity" value={formData.quantity} onChange={handleInputChange} className="w-full px-3 py-1.5 text-sm focus:ring-2 dark: dark: border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('Unit')} *</label>
+                <select name="unit" value={formData.unit} onChange={handleInputChange} className="w-full px-3 py-1.5 text-sm focus:ring-2 border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50">
+                  <option value="">{t('Select Unit')}</option>
+                  <option value="Pc">{t('Pc')}</option>
+                  <option value="Kg">{t('Kg')}</option>
+                  <option value="Ft">{t('Ft')}</option>
+                  <option value="Dozen">{t('Dozen')}</option>
+                  <option value="Box">{t('Box')}</option>
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('Low Stock Threshold')}</label>

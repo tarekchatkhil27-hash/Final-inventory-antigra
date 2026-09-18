@@ -32,6 +32,8 @@ interface GlobalState {
   setBusinessSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  categories: string[];
+  setCategories: React.Dispatch<React.SetStateAction<string[]>>;
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
   customers: Customer[];
@@ -83,6 +85,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   });
   
   const [products, setProducts] = useLocalStorage<Product[]>('app_products', []);
+  const [categories, setCategories] = useLocalStorage<string[]>('app_categories', ['Electronics', 'Clothing', 'Food', 'Furniture', 'Other']);
   const [suppliers, setSuppliers] = useLocalStorage<Supplier[]>('app_suppliers', []);
   const [customers, setCustomers] = useLocalStorage<Customer[]>('app_customers', []);
   
@@ -123,6 +126,8 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       value={{
         products,
         setProducts,
+        categories,
+        setCategories,
         suppliers,
         setSuppliers,
         customers,

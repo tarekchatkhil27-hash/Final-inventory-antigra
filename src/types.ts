@@ -20,6 +20,7 @@ export interface Product {
   price: number;
   cost: number;
   quantity: number;
+  unit: string;
   minThreshold: number;
   batchNumber?: string;
   addedBy?: string;
