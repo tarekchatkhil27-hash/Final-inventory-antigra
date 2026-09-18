@@ -14,14 +14,19 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(dateString: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(dateString));
+export function formatDate(dateString: string | undefined): string {
+  if (!dateString) return '-';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(dateString));
+  } catch (e) {
+    return '-';
+  }
 }
 
 export type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';

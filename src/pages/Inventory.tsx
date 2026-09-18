@@ -369,8 +369,7 @@ export function Inventory() {
                       <td className="px-4 py-4">{product.quantity}</td>
                       <td className="px-4 py-4 font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency((product.movingAverageCost || product.cost) * product.quantity)}</td>
                       <td className="px-4 py-4 text-xs">
-                        {formatDate(product.lastRestocked)}<br/>
-                        <span className="text-slate-400">{new Date(product.lastRestocked).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        {formatDate(product.lastRestocked)}
                       </td>
                       <td className="px-4 py-4">{getStatusBadge(product.quantity, product.minThreshold)}</td>
                       <td className="px-4 py-4 text-right">
@@ -440,7 +439,7 @@ export function Inventory() {
                   </div>
                   <div className="col-span-2 flex justify-end items-center mt-1">
                     <div className="text-right text-xs text-slate-400">
-                      {formatDate(product.lastRestocked)} {new Date(product.lastRestocked).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {formatDate(product.lastRestocked)}
                     </div>
                   </div>
                 </div>
