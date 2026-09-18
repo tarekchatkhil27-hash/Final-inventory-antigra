@@ -4,8 +4,6 @@ import { Button } from '../ui/Button';
 import { Download, ArrowLeft, FileText, Eye } from 'lucide-react';
 import { useGlobal } from '../../context/GlobalContext';
 import { formatCurrency, isWithinTimeRange, TimeRange } from '../../lib/utils';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface FinancialReportsProps {
@@ -19,7 +17,7 @@ interface ReportData {
 }
 
 export function FinancialReports({ onBack }: FinancialReportsProps) {
-  const { products, sales, transactions, customers, suppliers, businessSettings } = useGlobal();
+  const { products, sales, transactions, customers, suppliers, businessSettings, receivables, payables } = useGlobal();
   const { t } = useLanguage();
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [viewingReport, setViewingReport] = useState<ReportData | null>(null);
@@ -32,42 +30,7 @@ export function FinancialReports({ onBack }: FinancialReportsProps) {
     return transactions.filter(t => isWithinTimeRange(t.date, timeRange));
   }, [transactions, timeRange]);
 
-  const generatePDF = (data: ReportData) => {
-    const doc = new jsPDF();
-    
-    // Business Header
-    doc.setFontSize(24);
-    doc.setTextColor(79, 70, 229); // Indigo 600
-    doc.text(businessSettings.businessName, 14, 22);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139); // Slate 500
-    if (businessSettings.ownerName) {
-      doc.text(`${t('Owner')}: ${businessSettings.ownerName}`, 14, 28);
-      doc.text(businessSettings.phone, 14, 33);
-      doc.text(businessSettings.address, 14, 38);
-    } else {
-      doc.text(businessSettings.phone, 14, 28);
-      doc.text(businessSettings.address, 14, 33);
-    }
-    
-    // Report Title
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42); // Slate 900
-    doc.text(data.title, 14, 50);
-    
-    doc.setFontSize(10);
-    const timeRangeText = t(timeRange === 'all' ? 'All Time' : timeRange === 'today' ? 'Today' : timeRange === 'week' ? 'This Week' : timeRange === 'month' ? 'This Month' : 'This Year');
-    doc.text(`${t('Time Range:')} ${timeRangeText}`, 14, 57);
-    
-    autoTable(doc, {
-      startY: 63,
-      head: [data.head],
-      body: data.body,
-    });
-
-    doc.save(`${data.title.toLowerCase().replace(/\s+/g, '-')}.pdf`);
-  };
+  // deleted
 
   const getBalanceSheetData = (): ReportData => {
     const liquidCash = transactions.reduce((sum, t) => {
@@ -75,46 +38,79 @@ export function FinancialReports({ onBack }: FinancialReportsProps) {
       if (t.type === 'purchase' || t.type === 'expense') return sum - t.amount;
       return sum;
     }, 0);
-    const stockValue = products.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
-    const totalAssets = liquidCash + stockValue;
+    const stockValue = products.reduce((sum, p) => sum + ((p.movingAverageCost || p.cost) * p.quantity), 0);
+    const accountsReceivable = receivables.reduce((sum, r) => sum + r.dueAmount, 0);
+    const accountsPayable = payables.reduce((sum, p) => sum + p.dueAmount, 0);
+    
+    const totalAssets = liquidCash + stockValue + accountsReceivable;
+    const totalLiabilities = accountsPayable;
+    const totalEquity = totalAssets - totalLiabilities;
 
     return {
       title: t('Professional Balance Sheet'),
-      head: [t('Asset Type'), t('Amount')],
+      head: [t('Account'), t('Amount')],
       body: [
+        ['--- ' + t('Assets') + ' ---', ''],
         [t('Liquid Cash'), formatCurrency(liquidCash)],
-        [t('Stock Value'), formatCurrency(stockValue)],
+        [t('Inventory Value'), formatCurrency(stockValue)],
+        [t('Accounts Receivable'), formatCurrency(accountsReceivable)],
         [t('Total Assets'), formatCurrency(totalAssets)],
+        ['', ''],
+        ['--- ' + t('Liabilities & Equity') + ' ---', ''],
+        [t('Accounts Payable'), formatCurrency(accountsPayable)],
+        [t('Total Liabilities'), formatCurrency(totalLiabilities)],
+        [t('Owner Equity / Net Worth'), formatCurrency(totalEquity)],
       ]
     };
   };
 
   const getProfitLossData = (): ReportData => {
-    const revenue = filteredSales.reduce((sum, s) => sum + s.grandTotal, 0) + 
-                    filteredTransactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-    const expenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const productRevenue = filteredSales.reduce((sum, s) => sum + s.grandTotal, 0);
+    const otherRevenue = filteredTransactions.filter(t => t.type === 'sale' || t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const totalRevenue = productRevenue + otherRevenue;
+
+    const expensesByCategory: Record<string, number> = {};
+    filteredTransactions.filter(t => t.type === 'expense').forEach(t => {
+      const cat = t.category || t('Uncategorized Expense');
+      expensesByCategory[cat] = (expensesByCategory[cat] || 0) + t.amount;
+    });
+    const totalExpenses = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
     
     let cogs = 0;
     filteredSales.forEach(sale => {
       sale.items.forEach(item => {
         const product = products.find(p => p.id === item.productId);
         if (product) {
-          cogs += product.cost * item.quantity;
+          cogs += (product.movingAverageCost || product.cost) * item.quantity;
         }
       });
     });
-      // Removed mock COGS addition
 
-    const netProfit = revenue - cogs - expenses;
+    const grossProfit = totalRevenue - cogs;
+    const netProfit = grossProfit - totalExpenses;
+
+    const expenseRows = Object.entries(expensesByCategory).map(([cat, amount]) => [
+      `  - ${cat}`, formatCurrency(amount)
+    ]);
 
     return {
       title: t('Profit and Loss Statement'),
       head: [t('Category'), t('Amount')],
       body: [
-        [t('Total Revenue'), formatCurrency(revenue)],
-        [t('Cost of Goods Sold (COGS)'), formatCurrency(cogs)],
-        [t('Gross Profit'), formatCurrency(revenue - cogs)],
-        [t('Total Expenses'), formatCurrency(expenses)],
+        ['--- ' + t('Revenue') + ' ---', ''],
+        [t('Product Sales Revenue'), formatCurrency(productRevenue)],
+        [t('Other Income'), formatCurrency(otherRevenue)],
+        [t('Total Revenue'), formatCurrency(totalRevenue)],
+        ['', ''],
+        ['--- ' + t('Cost of Goods Sold (COGS)') + ' ---', ''],
+        [t('Total COGS'), formatCurrency(cogs)],
+        ['', ''],
+        [t('Gross Profit'), formatCurrency(grossProfit)],
+        ['', ''],
+        ['--- ' + t('Operating Expenses') + ' ---', ''],
+        ...expenseRows,
+        [t('Total Expenses'), formatCurrency(totalExpenses)],
+        ['', ''],
         [t('Net Profit'), formatCurrency(netProfit)],
       ]
     };
@@ -201,14 +197,32 @@ export function FinancialReports({ onBack }: FinancialReportsProps) {
     setViewingReport(report.getData());
   };
 
-  const handleDownload = (report: any) => {
-    generatePDF(report.getData());
+  const handlePrint = (report: ReportData) => {
+    const printContent = document.getElementById('print-area');
+    if (!printContent) return;
+
+    const originalContent = document.body.innerHTML;
+    
+    // Add print specific styles
+    const printStyles = `
+      <style>
+        @media print {
+          body * { visibility: hidden; }
+          #print-area, #print-area * { visibility: visible; }
+          #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+          .print-hide { display: none !important; }
+        }
+      </style>
+    `;
+    
+    document.head.insertAdjacentHTML('beforeend', printStyles);
+    window.print();
   };
 
   if (viewingReport) {
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300" id="print-area">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print-hide">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => setViewingReport(null)} className="rounded-full">
               <ArrowLeft className="h-5 w-5" />
@@ -219,11 +233,23 @@ export function FinancialReports({ onBack }: FinancialReportsProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => generatePDF(viewingReport)}>
+            <Button onClick={() => handlePrint(viewingReport)}>
               <Download className="mr-2 h-4 w-4" />
-              {t('Download PDF')}
+              {t('Print / Save PDF')}
             </Button>
           </div>
+        </div>
+
+        {/* Print Header (Visible only when printing) */}
+        <div className="hidden print:block mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">{businessSettings.businessName}</h1>
+          <div className="text-slate-600 mb-6">
+            {businessSettings.ownerName && <p>{t('Owner')}: {businessSettings.ownerName}</p>}
+            <p>{businessSettings.phone}</p>
+            <p>{businessSettings.address}</p>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-2">{viewingReport.title}</h2>
+          <p className="text-slate-600 font-medium">{t('Time Range:')} {t(timeRange === 'all' ? 'All Time' : timeRange === 'today' ? 'Today' : timeRange === 'week' ? 'This Week' : timeRange === 'month' ? 'This Month' : 'This Year')}</p>
         </div>
 
         <Card>
