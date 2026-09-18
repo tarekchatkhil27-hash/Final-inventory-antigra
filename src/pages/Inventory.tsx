@@ -262,12 +262,7 @@ export function Inventory() {
           <p className="text-slate-500 dark:text-slate-400">{t('Manage your products and stock levels.')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" />
-            {t('Import CSV')}
-          </Button>
-          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50" />
-          
+
           <Button variant="outline" onClick={exportCSV}>
             <Download className="mr-2 h-4 w-4" />
             {t('Export CSV')}
@@ -287,9 +282,6 @@ export function Inventory() {
         <CardHeader className="pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <CardTitle>{t('Products')}</CardTitle>
-            <button onClick={downloadSampleCSV} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400 text-left md:text-right">
-              {t('Download Sample CSV')}
-            </button>
           </div>
           
           {/* Filters */}
