@@ -1,0 +1,392 @@
+import React, { useState, useMemo, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Plus, ShoppingCart, Search, Filter, Download, Upload, MoreVertical, Edit, Trash2, Package } from 'lucide-react';
+import { useGlobal } from '../context/GlobalContext';
+import { AddProductModal } from '../components/inventory/AddProductModal';
+import { AddPurchaseForm } from '../components/inventory/AddPurchaseForm';
+import { ProductDetailsModal } from '../components/inventory/ProductDetailsModal';
+import { formatCurrency, formatDate, cn } from '../lib/utils';
+import { Product } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { motion, AnimatePresence } from 'motion/react';
+
+export function Inventory() {
+  const { products, setProducts, setHistoryLogs, addNotification } = useGlobal();
+  const { t } = useLanguage();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Derived categories for filter
+  const categories = useMemo(() => {
+    const cats = new Set(products.map(p => p.category).filter(Boolean));
+    return Array.from(cats);
+  }, [products]);
+
+  // Filtering logic
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter ? product.category === categoryFilter : true;
+      
+      let matchesStatus = true;
+      if (statusFilter === 'in_stock') matchesStatus = product.quantity > product.minThreshold;
+      if (statusFilter === 'low_stock') matchesStatus = product.quantity > 0 && product.quantity <= product.minThreshold;
+      if (statusFilter === 'out_of_stock') matchesStatus = product.quantity === 0;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [products, searchQuery, categoryFilter, statusFilter]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('');
+    setStatusFilter('');
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`${t('Are you sure you want to delete')} ${name}?`)) {
+      setProducts(prev => prev.filter(p => p.id !== id));
+      setHistoryLogs(prev => [{
+        id: `LOG-${Date.now()}`,
+        date: new Date().toISOString(),
+        module: 'inventory',
+        action: 'Delete Product',
+        description: `Deleted product: ${name}`,
+        user: 'Admin'
+      }, ...prev]);
+
+      // Notification
+      addNotification({
+        title: 'Product Deleted',
+        message: `${name} has been removed from inventory.`,
+        type: 'warning',
+        module: 'inventory'
+      });
+    }
+  };
+
+  // CSV Export
+  const exportCSV = () => {
+    const headers = ['SKU', 'Name', 'Category', 'Price', 'Cost', 'Quantity', 'MinThreshold'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredProducts.map(p => 
+        [p.sku, `"${p.name}"`, p.category, p.price, p.cost, p.quantity, p.minThreshold].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'inventory_export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // CSV Import
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n');
+      if (lines.length > 1) {
+        const newProducts: Product[] = [];
+        // Skip header row
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          // Simple CSV parser (doesn't handle commas inside quotes perfectly, but works for basic cases)
+          const values = line.split(',');
+          if (values.length >= 7) {
+            newProducts.push({
+              id: `P${Date.now()}-${i}`,
+              sku: values[0],
+              name: values[1].replace(/"/g, ''),
+              category: values[2],
+              price: parseFloat(values[3]) || 0,
+              cost: parseFloat(values[4]) || 0,
+              quantity: parseInt(values[5], 10) || 0,
+              minThreshold: parseInt(values[6], 10) || 0,
+              lastRestocked: new Date().toISOString()
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          setProducts(prev => [...newProducts, ...prev]);
+          setHistoryLogs(prev => [{
+            id: `LOG-${Date.now()}`,
+            date: new Date().toISOString(),
+            module: 'inventory',
+            action: 'Import CSV',
+            description: `Imported ${newProducts.length} products`,
+            user: 'Admin'
+          }, ...prev]);
+          alert(`${t('Successfully imported')} ${newProducts.length} ${t('products')}.`);
+        }
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const downloadSampleCSV = () => {
+    const content = "SKU,Name,Category,Price,Cost,Quantity,MinThreshold\nPRD-123456,Sample Product,Electronics,99.99,50.00,100,10";
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'sample_inventory.csv';
+    link.click();
+  };
+
+  const getStatusBadge = (qty: number, min: number) => {
+    if (qty === 0) {
+      return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">{t('Out of Stock')}</span>;
+    }
+    if (qty <= min) {
+      return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">{t('Low Stock')}</span>;
+    }
+    return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">{t('In Stock')}</span>;
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="space-y-6"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{t('Inventory')}</h1>
+          <p className="text-slate-500 dark:text-slate-400">{t('Manage your products and stock levels.')}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t('Import CSV')}
+          </Button>
+          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden border-none bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/30 transition-all duration-200 focus:outline-none dark:text-slate-50" />
+          
+          <Button variant="outline" onClick={exportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            {t('Export CSV')}
+          </Button>
+          <Button variant="secondary" onClick={() => setIsPurchaseModalOpen(true)}>
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            {t('Add Purchase')}
+          </Button>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('Add to Inventory')}
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle>{t('Products')}</CardTitle>
+            <button onClick={downloadSampleCSV} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400 text-left md:text-right">
+              {t('Download Sample CSV')}
+            </button>
+          </div>
+          
+          {/* Filters */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="relative md:col-span-2">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder={t('Search by name or SKU...')} 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-transparent py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:text-slate-50"
+              />
+            </div>
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:text-slate-50 dark:bg-slate-950"
+            >
+              <option value="">{t('All Categories')}</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:text-slate-50 dark:bg-slate-950"
+              >
+                <option value="">{t('All Statuses')}</option>
+                <option value="in_stock">{t('In Stock')}</option>
+                <option value="low_stock">{t('Low Stock')}</option>
+                <option value="out_of_stock">{t('Out of Stock')}</option>
+              </select>
+              {(searchQuery || categoryFilter || statusFilter) && (
+                <Button variant="ghost" size="icon" onClick={clearFilters} title={t('Clear Filters')}>
+                  <Filter className="h-4 w-4 text-slate-500" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-500 dark:text-slate-400">
+              <thead className="sticky top-0 z-10 bg-white/70 backdrop-blur-md text-xs uppercase text-slate-700 shadow-sm dark:bg-black/50 dark:text-slate-300">
+                <tr>
+                  <th className="px-4 py-4 rounded-tl-xl">{t('Product')}</th>
+                  <th className="px-4 py-4">{t('Brand')}</th>
+                  <th className="px-4 py-4">{t('SKU')}</th>
+                  <th className="px-4 py-4">{t('Category')}</th>
+                  <th className="px-4 py-4">{t('Price')}</th>
+                  <th className="px-4 py-4">{t('Cost')}</th>
+                  <th className="px-4 py-4">{t('Stock')}</th>
+                  <th className="px-4 py-4">{t('Total Cost')}</th>
+                  <th className="px-4 py-4">{t('Last Updated')}</th>
+                  <th className="px-4 py-4">{t('Status')}</th>
+                  <th className="px-4 py-4 rounded-tr-xl text-right">{t('Actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                <AnimatePresence mode="popLayout">
+                  {filteredProducts.length > 0 ? filteredProducts.map((product) => (
+                    <motion.tr 
+                      layout
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.2 }}
+                      key={product.id} 
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group" 
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <td className="px-4 py-4 font-medium text-slate-900 dark:text-slate-50 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center dark:bg-indigo-900/30 dark:text-indigo-400">
+                          <Package className="h-4 w-4" />
+                        </div>
+                        {product.name}
+                      </td>
+                      <td className="px-4 py-4">{product.brand || '-'}</td>
+                      <td className="px-4 py-4">{product.sku}</td>
+                      <td className="px-4 py-4">{product.category || '-'}</td>
+                      <td className="px-4 py-4">{formatCurrency(product.price)}</td>
+                      <td className="px-4 py-4">{formatCurrency(product.cost)}</td>
+                      <td className="px-4 py-4">{product.quantity}</td>
+                      <td className="px-4 py-4 font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(product.cost * product.quantity)}</td>
+                      <td className="px-4 py-4 text-xs">
+                        {formatDate(product.lastRestocked)}<br/>
+                        <span className="text-slate-400">{new Date(product.lastRestocked).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      </td>
+                      <td className="px-4 py-4">{getStatusBadge(product.quantity, product.minThreshold)}</td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(product.id, product.name); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  )) : (
+                    <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <td colSpan={11} className="px-4 py-16 text-center text-slate-500">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
+                            <Package className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+                          </div>
+                          <p className="text-base font-medium text-slate-900 dark:text-slate-50">{t('No products found')}</p>
+                          <p className="text-sm">{t('Try adjusting your search or filters.')}</p>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  )}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4">
+            {filteredProducts.length > 0 ? filteredProducts.map((product) => (
+              <div key={product.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => setSelectedProduct(product)}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center dark:bg-indigo-900/30 dark:text-indigo-400 shrink-0">
+                      <Package className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-slate-900 dark:text-slate-50">{product.name}</h4>
+                      <div className="flex gap-2">
+                        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{product.brand}</p>
+                        <p className="text-xs text-slate-500">{product.sku}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(product.id, product.name); }}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm mt-4">
+                  <div>
+                    <span className="text-slate-500 block text-xs">{t('Price')}</span>
+                    <span className="font-medium dark:text-slate-300">{formatCurrency(product.price)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-xs">{t('Stock')}</span>
+                    <span className="font-medium dark:text-slate-300">{product.quantity}</span>
+                  </div>
+                  <div className="col-span-2 flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-slate-500 block text-xs">{t('Total Cost')}</span>
+                      <span className="font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(product.cost * product.quantity)}</span>
+                    </div>
+                    {getStatusBadge(product.quantity, product.minThreshold)}
+                  </div>
+                  <div className="col-span-2 flex justify-end items-center mt-1">
+                    <div className="text-right text-xs text-slate-400">
+                      {formatDate(product.lastRestocked)} {new Date(product.lastRestocked).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="py-8 text-center text-slate-500">
+                {t('No products found.')}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AddProductModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      <AddPurchaseForm isOpen={isPurchaseModalOpen} onClose={() => setIsPurchaseModalOpen(false)} />
+      <ProductDetailsModal 
+        isOpen={!!selectedProduct} 
+        product={selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+        onDelete={handleDelete}
+      />
+    </motion.div>
+  );
+}
