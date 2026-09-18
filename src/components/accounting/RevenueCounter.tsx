@@ -56,31 +56,31 @@ export function RevenueCounter() {
         </select>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20">
-            <Coins className="h-6 w-6 text-emerald-600 mb-2" />
-            <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">{t('Cash')}</span>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(revenueCounter.cash)}</span>
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20">
+            <Coins className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 mb-1.5 sm:mb-2" />
+            <span className="text-[10px] sm:text-xs font-medium text-emerald-600 uppercase tracking-wider">{t('Cash')}</span>
+            <span className="text-xs sm:text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 break-words w-full text-center">{formatCurrency(revenueCounter.cash)}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-            <Smartphone className="h-6 w-6 text-pink-600 mb-2" />
-            <span className="text-xs font-medium text-pink-600 uppercase tracking-wider">{t('bKash')}</span>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(revenueCounter.bkas)}</span>
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
+            <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-pink-600 mb-1.5 sm:mb-2" />
+            <span className="text-[10px] sm:text-xs font-medium text-pink-600 uppercase tracking-wider">{t('bKash')}</span>
+            <span className="text-xs sm:text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 break-words w-full text-center">{formatCurrency(revenueCounter.bkas)}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
-            <CreditCard className="h-6 w-6 text-blue-600 mb-2" />
-            <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">{t('Card')}</span>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(revenueCounter.card)}</span>
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
+            <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mb-1.5 sm:mb-2" />
+            <span className="text-[10px] sm:text-xs font-medium text-blue-600 uppercase tracking-wider">{t('Card')}</span>
+            <span className="text-xs sm:text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 break-words w-full text-center">{formatCurrency(revenueCounter.card)}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20">
-            <Building2 className="h-6 w-6 text-indigo-600 mb-2" />
-            <span className="text-xs font-medium text-indigo-600 uppercase tracking-wider">{t('Bank')}</span>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(revenueCounter.bank)}</span>
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20">
+            <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600 mb-1.5 sm:mb-2" />
+            <span className="text-[10px] sm:text-xs font-medium text-indigo-600 uppercase tracking-wider">{t('Bank')}</span>
+            <span className="text-xs sm:text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 break-words w-full text-center">{formatCurrency(revenueCounter.bank)}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20">
-            <History className="h-6 w-6 text-amber-600 mb-2" />
-            <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">{t('Credit')}</span>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">{formatCurrency(revenueCounter.credit)}</span>
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 col-span-1 md:col-span-1">
+            <History className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600 mb-1.5 sm:mb-2" />
+            <span className="text-[10px] sm:text-xs font-medium text-amber-600 uppercase tracking-wider">{t('Credit')}</span>
+            <span className="text-xs sm:text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 break-words w-full text-center">{formatCurrency(revenueCounter.credit)}</span>
           </div>
         </div>
       </CardContent>
