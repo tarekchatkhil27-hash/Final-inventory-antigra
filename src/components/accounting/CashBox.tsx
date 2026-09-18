@@ -24,6 +24,7 @@ export function CashBox({ onBack }: CashBoxProps) {
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [addType, setAddType] = useState<'income' | 'expense'>('income');
   
   // Form State
@@ -286,7 +287,45 @@ export function CashBox({ onBack }: CashBoxProps) {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile view */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800">
+            {filteredTransactions.length > 0 ? filteredTransactions.map(tx => {
+              const isIncome = tx.type === 'sale' || tx.type === 'income';
+              const isExpense = tx.type === 'purchase' || tx.type === 'expense';
+              const isAdj = tx.type === 'adjustment';
+              
+              const borderColor = isIncome ? 'border-l-emerald-500' : isExpense ? 'border-l-rose-500' : 'border-l-blue-500';
+              const typeLabel = isAdj ? t('Adj') : isIncome ? t('In') : t('Out');
+              const moneyColor = isIncome ? 'text-emerald-600 dark:text-emerald-400' : isExpense ? 'text-rose-600 dark:text-rose-400' : (tx.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400');
+              const sign = isExpense || (isAdj && tx.amount < 0) ? '-' : '+';
+              
+              return (
+                <div 
+                  key={tx.id} 
+                  className={`border-l-4 ${borderColor} bg-white dark:bg-slate-900/40 p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors`}
+                  onClick={() => setSelectedTx(tx)}
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${isIncome ? 'bg-emerald-100 text-emerald-700' : isExpense ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {typeLabel}
+                    </span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                      {tx.referenceId || tx.id}
+                    </span>
+                  </div>
+                  <span className={`text-sm font-bold shrink-0 ${moneyColor}`}>
+                    {sign}{formatCurrency(Math.abs(tx.amount))}
+                  </span>
+                </div>
+              );
+            }) : (
+              <div className="py-8 text-center text-slate-500 text-sm">
+                {t('No transactions found matching your filters.')}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-500 dark:text-slate-400">
               <thead className="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
                 <tr>
@@ -303,7 +342,11 @@ export function CashBox({ onBack }: CashBoxProps) {
                   const isAdj = tx.type === 'adjustment';
                   
                   return (
-                    <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    <tr 
+                      key={tx.id} 
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors cursor-pointer"
+                      onClick={() => setSelectedTx(tx)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {new Date(tx.date).toLocaleDateString()} <span className="text-xs text-slate-400">{new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </td>
@@ -426,6 +469,57 @@ export function CashBox({ onBack }: CashBoxProps) {
               >
                 {addType === 'income' ? t('Save Income') : t('Save Expense')}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Details Modal */}
+      {selectedTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl dark:bg-slate-950 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('Transaction Details')}</h2>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedTx(null)} className="rounded-full">
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-sm text-slate-500">{t('Amount')}</span>
+                <span className={cn(
+                  "text-2xl font-bold",
+                  selectedTx.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                )}>
+                  {formatCurrency(Math.abs(selectedTx.amount))}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-y-4 text-sm">
+                <div>
+                  <span className="block text-xs text-slate-500">{t('Type')}</span>
+                  <span className="font-medium capitalize text-slate-900 dark:text-slate-50">{selectedTx.type}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-slate-500">{t('Date')}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-50">{new Date(selectedTx.date).toLocaleDateString()}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="block text-xs text-slate-500">{t('Description')}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-50">{selectedTx.description}</span>
+                </div>
+                {selectedTx.category && (
+                  <div className="col-span-2">
+                    <span className="block text-xs text-slate-500">{t('Category')}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-50">{selectedTx.category}</span>
+                  </div>
+                )}
+                {(selectedTx.referenceId || selectedTx.id) && (
+                  <div className="col-span-2">
+                    <span className="block text-xs text-slate-500">{t('Reference ID')}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-50 break-all">{selectedTx.referenceId || selectedTx.id}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ export function TransactionsList() {
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<any>(null);
 
   const handleInvoiceClick = (referenceId: string | undefined, type: string) => {
     if (!referenceId) return;
@@ -189,64 +190,90 @@ export function TransactionsList() {
 
           {/* Mobile Card View */}
           <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {filteredTransactions.map(txn => (
-              <div key={txn.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1 pr-4">
-                    {txn.referenceId ? (
-                      <div 
-                        className="cursor-pointer group"
-                        onClick={() => handleInvoiceClick(txn.referenceId, txn.type)}
-                      >
-                        <p className="font-medium text-indigo-600 dark:text-indigo-400 leading-tight group-hover:underline underline-offset-2 decoration-indigo-400/50 flex items-center gap-1">
-                          {txn.description}
-                          <ExternalLink className="h-3 w-3 inline-block" />
-                        </p>
+            {filteredTransactions.map(txn => {
+              const isIncome = txn.type === 'sale' || txn.type === 'income';
+              const isExpense = txn.type === 'purchase' || txn.type === 'expense';
+              const isAdj = txn.type === 'adjustment';
+              
+              const borderColor = isIncome ? 'border-l-emerald-500' : isExpense ? 'border-l-rose-500' : 'border-l-blue-500';
+              const typeLabel = isAdj ? t('Adj') : isIncome ? t('In') : t('Out');
+              const moneyColor = isIncome || (isAdj && txn.amount > 0) ? 'text-emerald-600 dark:text-emerald-400' : isExpense || (isAdj && txn.amount < 0) ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-50';
+              const sign = isIncome || (isAdj && txn.amount > 0) ? '+' : isExpense || (isAdj && txn.amount < 0) ? '-' : '';
+
+              const isExpanded = selectedTx?.id === txn.id;
+
+              return (
+                <div key={txn.id} className="flex flex-col bg-white dark:bg-slate-900/40 transition-colors">
+                  <div 
+                    className={`border-l-4 ${borderColor} p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50`}
+                    onClick={() => setSelectedTx(isExpanded ? null : txn)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${isIncome ? 'bg-emerald-100 text-emerald-700' : isExpense ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {typeLabel}
+                      </span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                        {txn.referenceId || txn.id}
+                      </span>
+                    </div>
+                    <span className={`text-sm font-bold shrink-0 ${moneyColor}`}>
+                      {sign}{formatCurrency(Math.abs(txn.amount))}
+                    </span>
+                  </div>
+
+                  {/* Expanded View (The old card) */}
+                  {isExpanded && (
+                    <div className="p-4 border-l-4 border-l-slate-200 dark:border-l-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1 pr-4">
+                          {txn.referenceId ? (
+                            <div 
+                              className="cursor-pointer group"
+                              onClick={() => handleInvoiceClick(txn.referenceId, txn.type)}
+                            >
+                              <p className="font-medium text-indigo-600 dark:text-indigo-400 leading-tight group-hover:underline underline-offset-2 decoration-indigo-400/50 flex items-center gap-1">
+                                {txn.description}
+                                <ExternalLink className="h-3 w-3 inline-block" />
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="font-medium text-slate-900 dark:text-slate-50 leading-tight">{txn.description}</p>
+                          )}
+                          {txn.category && (
+                            <p className="text-xs text-slate-500 mt-1">{txn.category}</p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="font-medium text-slate-900 dark:text-slate-50 leading-tight">{txn.description}</p>
-                    )}
-                    {txn.category && (
-                      <p className="text-xs text-slate-500 mt-1">{txn.category}</p>
-                    )}
-                  </div>
-                  <span className={`font-semibold text-right whitespace-nowrap ${
-                    txn.type === 'sale' || txn.type === 'income' || (txn.type === 'adjustment' && txn.amount > 0) ? 'text-emerald-600 dark:text-emerald-400' : 
-                    txn.type === 'expense' || txn.type === 'purchase' || (txn.type === 'adjustment' && txn.amount < 0) ? 'text-red-600 dark:text-red-400' : 
-                    'text-slate-900 dark:text-slate-50'
-                  }`}>
-                    {txn.type === 'sale' || txn.type === 'income' || (txn.type === 'adjustment' && txn.amount > 0) ? '+' : 
-                     txn.type === 'expense' || txn.type === 'purchase' || (txn.type === 'adjustment' && txn.amount < 0) ? '-' : ''}
-                    {formatCurrency(Math.abs(txn.amount))}
-                  </span>
+                      
+                      <div className="flex justify-between items-center text-xs text-slate-500 mb-3">
+                        <span>{formatDate(txn.date)}</span>
+                        <span className="font-mono">{txn.id}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-800/50">
+                        <div className="flex items-center gap-1.5">
+                          {isIncome ? (
+                            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                          ) : isExpense ? (
+                            <ArrowDownRight className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 text-blue-500" />
+                          )}
+                          <span className="capitalize text-slate-700 dark:text-slate-300 font-medium text-xs">{t(txn.type)}</span>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
+                          txn.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          txn.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {t(txn.status)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="flex justify-between items-center text-xs text-slate-500 mb-3">
-                  <span>{formatDate(txn.date)}</span>
-                  <span className="font-mono">{txn.id}</span>
-                </div>
-                
-                <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800/50">
-                  <div className="flex items-center gap-1.5">
-                    {txn.type === 'sale' || txn.type === 'income' ? (
-                      <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                    ) : txn.type === 'expense' || txn.type === 'purchase' ? (
-                      <ArrowDownRight className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4 text-blue-500" />
-                    )}
-                    <span className="capitalize text-slate-700 dark:text-slate-300 font-medium text-xs">{t(txn.type)}</span>
-                  </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
-                    txn.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                    txn.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {t(txn.status)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Empty State */}
