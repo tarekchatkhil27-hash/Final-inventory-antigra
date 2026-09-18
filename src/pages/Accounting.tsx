@@ -94,17 +94,42 @@ export function Accounting() {
   
   const totalAssets = liquidCash + stockValue;
 
-  // --- Chart Data ---
-  
-  // Revenue vs Expenses (Mock last 6 months)
-  const monthlyData = [
-    { name: 'Oct', revenue: 12000, expenses: 8000 },
-    { name: 'Nov', revenue: 15000, expenses: 9500 },
-    { name: 'Dec', revenue: 18000, expenses: 11000 },
-    { name: 'Jan', revenue: 14000, expenses: 8500 },
-    { name: 'Feb', revenue: 16000, expenses: 9000 },
-    { name: 'Mar', revenue: grossRevenue > 0 ? grossRevenue : 19000, expenses: totalExpenses > 0 ? totalExpenses : 10000 },
-  ];
+  // Chart Data dynamically computed from filtered lists
+  const chartData = useMemo(() => {
+    const dataMap: Record<string, { revenue: number, expenses: number }> = {};
+    
+    const formatKey = (dateStr: string) => {
+      const d = new Date(dateStr);
+      if (timeRange === 'today') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (timeRange === 'week' || timeRange === 'month') return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+      return d.toLocaleString('default', { month: 'short' });
+    };
+
+    filteredSales.forEach(sale => {
+      const key = formatKey(sale.date);
+      if (!dataMap[key]) dataMap[key] = { revenue: 0, expenses: 0 };
+      dataMap[key].revenue += sale.grandTotal;
+    });
+
+    filteredTransactions.forEach(tx => {
+      const key = formatKey(tx.date);
+      if (!dataMap[key]) dataMap[key] = { revenue: 0, expenses: 0 };
+      if (tx.type === 'sale') dataMap[key].revenue += tx.amount;
+      if (tx.type === 'expense') dataMap[key].expenses += tx.amount;
+    });
+
+    const result = Object.entries(dataMap).map(([name, vals]) => ({
+      name,
+      revenue: vals.revenue,
+      expenses: vals.expenses
+    }));
+
+    if (result.length === 0) {
+      return [{ name: t('No Data'), revenue: 0, expenses: 0 }];
+    }
+
+    return result;
+  }, [filteredSales, filteredTransactions, timeRange, t]);
 
   // Expenses Pie Chart
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -267,7 +292,7 @@ export function Accounting() {
 
       {/* Financial Overview Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <Card>
+        <Card className="col-span-2 sm:col-span-1 lg:col-span-1">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
@@ -325,7 +350,7 @@ export function Accounting() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2 sm:col-span-1 lg:col-span-1">
+        <Card>
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div>
@@ -407,7 +432,7 @@ export function Accounting() {
             <CardContent>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
