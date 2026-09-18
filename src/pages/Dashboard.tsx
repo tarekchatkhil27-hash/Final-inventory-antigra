@@ -66,8 +66,7 @@ export function Dashboard() {
         }
       });
     });
-    const mockSalesTotal = filteredTransactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-    totalCogs += mockSalesTotal * 0.5;
+    // Remove mock COGS for mock sales since we removed mock data
     return totalCogs;
   }, [filteredSales, products, filteredTransactions]);
 

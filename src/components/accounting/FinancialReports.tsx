@@ -103,8 +103,7 @@ export function FinancialReports({ onBack }: FinancialReportsProps) {
         }
       });
     });
-    const mockSalesTotal = filteredTransactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-    cogs += mockSalesTotal * 0.5;
+      // Removed mock COGS addition
 
     const netProfit = revenue - cogs - expenses;
 

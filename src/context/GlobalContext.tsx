@@ -1,6 +1,27 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Product, Supplier, Customer, HistoryLog, Payable, Receivable, SaleRecord, PurchaseRecord, Transaction, Staff, Attendance, Payroll, Roster, AppNotification, UserRole, User, BusinessSettings } from '../types';
-import { mockProducts, mockTransactions } from '../data/mockData';
+
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error);
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.warn(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
+
+  return [storedValue, setStoredValue] as const;
+}
 
 interface GlobalState {
   currentUserRole: UserRole;
@@ -43,12 +64,14 @@ interface GlobalState {
 const GlobalContext = createContext<GlobalState | undefined>(undefined);
 
 export function GlobalProvider({ children }: { children: ReactNode }) {
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>('admin');
-  const [users, setUsers] = useState<User[]>([
+  const [currentUserRole, setCurrentUserRole] = useLocalStorage<UserRole>('app_currentUserRole', 'admin');
+  
+  const [users, setUsers] = useLocalStorage<User[]>('app_users', [
     { id: 'U001', name: 'Admin User', username: 'admin', password: 'password123', role: 'admin', status: 'active', lastLogin: new Date().toISOString() },
     { id: 'U002', name: 'Staff User', username: 'staff', password: 'password123', role: 'staff', status: 'active', lastLogin: new Date().toISOString() }
   ]);
-  const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
+  
+  const [businessSettings, setBusinessSettings] = useLocalStorage<BusinessSettings>('app_businessSettings', {
     businessName: 'Nexus Inventory',
     ownerName: 'John Doe',
     currency: 'BDT',
@@ -58,85 +81,32 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     phone: '+1 234 567 8900',
     email: 'contact@nexus.com'
   });
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    { id: 'S001', name: 'TechCorp Electronics', mobile: '+1234567890' },
-    { id: 'S002', name: 'Office Plus', mobile: '+1987654321' },
-    { id: 'S003', name: 'Global Accessories', mobile: '+1122334455' },
-  ]);
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: 'C001', name: 'John Doe', mobile: '+1999888777' },
-    { id: 'C002', name: 'Jane Smith', mobile: '+1888777666' },
-  ]);
-  const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([
+  
+  const [products, setProducts] = useLocalStorage<Product[]>('app_products', []);
+  const [suppliers, setSuppliers] = useLocalStorage<Supplier[]>('app_suppliers', []);
+  const [customers, setCustomers] = useLocalStorage<Customer[]>('app_customers', []);
+  
+  const [historyLogs, setHistoryLogs] = useLocalStorage<HistoryLog[]>('app_historyLogs', [
     {
       id: 'H001',
       date: new Date().toISOString(),
       module: 'system',
       action: 'System Init',
-      description: 'System initialized with mock data',
+      description: 'System initialized',
       user: 'Admin',
     }
   ]);
-  const [payables, setPayables] = useState<Payable[]>([
-    {
-      id: 'PAY-001',
-      date: new Date(Date.now() - 86400000 * 2).toISOString(),
-      supplierId: 'S001',
-      supplierName: 'TechCorp Electronics',
-      totalAmount: 1500.00,
-      paidAmount: 500.00,
-      dueAmount: 1000.00,
-      status: 'partial',
-      relatedEntityId: 'PO-2026-001'
-    }
-  ]);
-  const [receivables, setReceivables] = useState<Receivable[]>([
-    {
-      id: 'REC-001',
-      date: new Date(Date.now() - 86400000 * 1).toISOString(),
-      customerId: 'C001',
-      customerName: 'John Doe',
-      totalAmount: 900.00,
-      paidAmount: 400.00,
-      dueAmount: 500.00,
-      status: 'partial',
-      relatedEntityId: 'INV-2026-001'
-    }
-  ]);
-  const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
-  const [staff, setStaff] = useState<Staff[]>([
-    {
-      id: 'EMP-001',
-      name: 'Alice Johnson',
-      position: 'Store Manager',
-      department: 'Management',
-      email: 'alice@example.com',
-      phone: '+8801711223344',
-      joinDate: '2025-01-15',
-      salary: 45000,
-      status: 'active',
-      shift: 'Morning'
-    },
-    {
-      id: 'EMP-002',
-      name: 'Bob Smith',
-      position: 'Sales Associate',
-      department: 'Sales',
-      email: 'bob@example.com',
-      phone: '+8801811223344',
-      joinDate: '2025-03-01',
-      salary: 25000,
-      status: 'active',
-      shift: 'Evening'
-    }
-  ]);
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [rosters, setRosters] = useState<Roster[]>([]);
-  const [payroll, setPayroll] = useState<Payroll[]>([]);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  
+  const [payables, setPayables] = useLocalStorage<Payable[]>('app_payables', []);
+  const [receivables, setReceivables] = useLocalStorage<Receivable[]>('app_receivables', []);
+  const [sales, setSales] = useLocalStorage<SaleRecord[]>('app_sales', []);
+  const [purchases, setPurchases] = useLocalStorage<PurchaseRecord[]>('app_purchases', []);
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('app_transactions', []);
+  const [staff, setStaff] = useLocalStorage<Staff[]>('app_staff', []);
+  const [attendance, setAttendance] = useLocalStorage<Attendance[]>('app_attendance', []);
+  const [rosters, setRosters] = useLocalStorage<Roster[]>('app_rosters', []);
+  const [payroll, setPayroll] = useLocalStorage<Payroll[]>('app_payroll', []);
+  const [notifications, setNotifications] = useLocalStorage<AppNotification[]>('app_notifications', []);
 
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => {
     const newNotification: AppNotification = {
