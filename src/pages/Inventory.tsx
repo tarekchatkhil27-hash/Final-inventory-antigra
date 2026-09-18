@@ -399,52 +399,43 @@ export function Inventory() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden space-y-4">
-            {filteredProducts.length > 0 ? filteredProducts.map((product) => (
-              <div key={product.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => setSelectedProduct(product)}>
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center dark:bg-indigo-900/30 dark:text-indigo-400 shrink-0">
-                      <Package className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-slate-900 dark:text-slate-50">{product.name}</h4>
-                      <div className="flex gap-2">
-                        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{product.brand}</p>
-                        <p className="text-xs text-slate-500">{product.sku}</p>
-                      </div>
-                    </div>
+          <div className="md:hidden space-y-3">
+            {filteredProducts.length > 0 ? filteredProducts.map((product) => {
+              const getBorderColor = () => {
+                if (product.quantity === 0) return 'border-l-red-500';
+                if (product.quantity <= product.minThreshold) return 'border-l-amber-500';
+                return 'border-l-emerald-500';
+              };
+              
+              const getBadgeColor = () => {
+                if (product.quantity === 0) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                if (product.quantity <= product.minThreshold) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+                return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+              };
+              
+              return (
+                <div 
+                  key={product.id} 
+                  className={`rounded-xl border border-slate-200 border-l-4 p-3 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-between shadow-sm bg-white dark:bg-slate-900/40 transition-colors ${getBorderColor()}`}
+                  onClick={() => setSelectedProduct(product)}
+                >
+                  <div className="flex items-center min-w-0 pr-2 gap-2">
+                    <span className="font-semibold text-slate-900 dark:text-slate-50 text-sm truncate">{product.name}</span>
+                    {product.brand && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shrink-0">
+                        {product.brand}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(product.id, product.name); }}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm mt-4">
-                  <div>
-                    <span className="text-slate-500 block text-xs">{t('Price')}</span>
-                    <span className="font-medium dark:text-slate-300">{formatCurrency(product.price)}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-xs">{t('Stock')}</span>
-                    <span className="font-medium dark:text-slate-300">{product.quantity}</span>
-                  </div>
-                  <div className="col-span-2 flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <div>
-                      <span className="text-slate-500 block text-xs">{t('Total Cost (MAC)')}</span>
-                      <span className="font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency((product.movingAverageCost || product.cost) * product.quantity)}</span>
-                    </div>
-                    {getStatusBadge(product.quantity, product.minThreshold)}
-                  </div>
-                  <div className="col-span-2 flex justify-end items-center mt-1">
-                    <div className="text-right text-xs text-slate-400">
-                      {formatDate(product.lastRestocked)}
-                    </div>
+                  <div className="flex items-center shrink-0 gap-3">
+                    <span className="font-bold text-sm text-indigo-600 dark:text-indigo-400">{formatCurrency(product.price)}</span>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${getBadgeColor()}`}>
+                      {product.quantity}
+                    </span>
                   </div>
                 </div>
-              </div>
-            )) : (
+              );
+            }) : (
               <div className="py-8 text-center text-slate-500">
                 {t('No products found.')}
               </div>
