@@ -13,7 +13,7 @@ interface AddProductModalProps {
 }
 
 export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
-  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, staff, addNotification, setPurchases, categories } = useGlobal();
+  const { products, setProducts, suppliers, setSuppliers, setHistoryLogs, setPayables, setTransactions, staff, addNotification, purchases, setPurchases, categories } = useGlobal();
   const { t } = useLanguage();
 
   const [productsToAdd, setProductsToAdd] = useState<any[]>([]);

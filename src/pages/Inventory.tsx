@@ -32,8 +32,8 @@ export function Inventory() {
   // Filtering logic
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (product.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+                            (product.sku?.toLowerCase() || '').includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter ? product.category === categoryFilter : true;
       
       let matchesStatus = true;
