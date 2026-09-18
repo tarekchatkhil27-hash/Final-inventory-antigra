@@ -192,13 +192,14 @@ export function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-5">
         <MetricCard 
           title={t('Total Revenue')} 
           value={formatCurrency(totalRevenue)} 
           trend={0} 
           icon={DollarSign} 
           timeRange={timeRange}
+          colorClass="bg-gradient-to-b from-emerald-400 to-emerald-600"
         />
         <MetricCard 
           title={t('Total Expenses')} 
@@ -206,6 +207,7 @@ export function Dashboard() {
           trend={0} 
           icon={Wallet} 
           timeRange={timeRange}
+          colorClass="bg-gradient-to-b from-orange-400 to-orange-600"
         />
         <MetricCard 
           title={t('Net Profit')} 
@@ -213,6 +215,7 @@ export function Dashboard() {
           trend={0} 
           icon={TrendingUp} 
           timeRange={timeRange}
+          colorClass="bg-gradient-to-b from-indigo-400 to-indigo-600"
         />
         <MetricCard 
           title={t('Total Stock Value')} 
@@ -220,6 +223,7 @@ export function Dashboard() {
           trend={0} 
           icon={PackageX} 
           timeRange={timeRange}
+          colorClass="bg-gradient-to-b from-blue-400 to-blue-600"
         />
         <MetricCard 
           title={t('Low Stock Items')} 
@@ -228,7 +232,8 @@ export function Dashboard() {
           icon={AlertCircle} 
           trendText={t('Needs attention')}
           isAlert
-          className="col-span-2 md:col-span-1"
+          className="col-span-3 sm:col-span-2 md:col-span-1"
+          colorClass="bg-gradient-to-b from-red-400 to-red-600"
         />
       </div>
 
@@ -378,7 +383,7 @@ export function Dashboard() {
   );
 }
 
-function MetricCard({ title, value, trend, icon: Icon, trendText, isAlert, timeRange, className }: any) {
+function MetricCard({ title, value, trend, icon: Icon, trendText, isAlert, timeRange, className, colorClass }: any) {
   const { t } = useLanguage();
   const isPositive = trend > 0;
   const isNegative = trend < 0;
@@ -395,30 +400,33 @@ function MetricCard({ title, value, trend, icon: Icon, trendText, isAlert, timeR
   };
   
   return (
-    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-      <Card className={cn("h-full", className)}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-full">
+      <Card className={cn("h-full relative overflow-hidden flex flex-col justify-between p-3 sm:p-4 sm:pt-4", className)}>
+        {colorClass && (
+          <div className={cn("absolute top-0 left-0 w-1 sm:w-1.5 h-full opacity-80", colorClass)} />
+        )}
+        <div className="flex flex-row items-center justify-between space-y-0 mb-1 sm:mb-2 pl-2 sm:pl-3">
+          <CardTitle className="text-[10px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 line-clamp-1">
             {title}
           </CardTitle>
-          <Icon className={cn("h-4 w-4 text-slate-400", isAlert && "text-red-500")} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{value}</div>
-          <p className="text-xs mt-1 flex items-center">
-            {trend !== 0 ? (
+          <Icon className={cn("h-3 w-3 sm:h-4 sm:w-4 text-slate-400 shrink-0", isAlert && "text-red-500")} />
+        </div>
+        <div className="pl-2 sm:pl-3">
+          <div className="text-base sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 break-words">{value}</div>
+          <p className="text-[9px] sm:text-xs mt-1 flex flex-col sm:flex-row sm:items-center text-slate-500 dark:text-slate-400">
+            {trend !== 0 && (
               <span className={cn(
-                "font-medium flex items-center",
+                "font-medium flex items-center mb-0.5 sm:mb-0",
                 isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
               )}>
                 {isPositive ? '+' : ''}{trend}%
               </span>
-            ) : null}
-            <span className="text-slate-500 dark:text-slate-400 ml-1">
+            )}
+            <span className={cn(trend !== 0 && "sm:ml-1", "truncate")}>
               {trendText || defaultTrendText()}
             </span>
           </p>
-        </CardContent>
+        </div>
       </Card>
     </motion.div>
   );
