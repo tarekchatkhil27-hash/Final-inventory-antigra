@@ -12,7 +12,6 @@ import { CashBox } from '../components/accounting/CashBox';
 import { CreditBook } from '../components/accounting/CreditBook';
 import { TransactionsList } from '../components/accounting/TransactionsList';
 import { FinancialReports } from '../components/accounting/FinancialReports';
-import { RevenueCounter } from '../components/accounting/RevenueCounter';
 import { useLanguage } from '../context/LanguageContext';
 
 export function Accounting() {
@@ -176,8 +175,6 @@ export function Accounting() {
           </div>
         </div>
 
-        {/* Revenue Counter */}
-        <RevenueCounter />
 
         {/* Quick Access Grid */}
         <div>
