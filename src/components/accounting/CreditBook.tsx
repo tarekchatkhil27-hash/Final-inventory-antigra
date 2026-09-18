@@ -25,6 +25,8 @@ export function CreditBook({ onBack }: CreditBookProps) {
     record: Payable | Receivable | null;
   }>({ isOpen: false, type: 'receivable', record: null });
   
+  const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
+  
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
@@ -68,7 +70,6 @@ export function CreditBook({ onBack }: CreditBookProps) {
     const amount = parseFloat(paymentAmount);
     const { type, record } = paymentModal;
     
-    // Add small tolerance for floating point discrepancies due to rounding in UI
     if (!record || isNaN(amount) || amount <= 0 || amount > Math.round(record.dueAmount)) return;
 
     // Recalculate accurately
@@ -76,13 +77,20 @@ export function CreditBook({ onBack }: CreditBookProps) {
     const newPaidAmount = record.paidAmount + amount;
     const newStatus = newDueAmount <= 0 ? 'paid' : 'partial';
 
+    if (newDueAmount <= 0) {
+      if (!window.confirm(t('This will fully clear the due and remove the record from the credit book. Are you sure you want to proceed?'))) {
+        return;
+      }
+    }
+
     if (type === 'receivable') {
       // Update Receivable
-      setReceivables(prev => prev.map(r => 
-        r.id === record.id 
-          ? { ...r, dueAmount: newDueAmount, paidAmount: newPaidAmount, status: newStatus } 
-          : r
-      ));
+      setReceivables(prev => {
+        if (newDueAmount <= 0) {
+          return prev.filter(r => r.id !== record.id);
+        }
+        return prev.map(r => r.id === record.id ? { ...r, dueAmount: newDueAmount, paidAmount: newPaidAmount, status: newStatus } : r);
+      });
       
       // Add Income Transaction
       const newTx: Transaction = {
@@ -98,29 +106,26 @@ export function CreditBook({ onBack }: CreditBookProps) {
       };
       setTransactions(prev => [newTx, ...prev]);
       
-      // Log History
-      setHistoryLogs(prev => [{
-        id: `LOG-${Date.now()}`,
-        date: new Date().toISOString(),
-        module: 'accounting',
-        action: 'Receive Payment',
-        description: `Received ${formatCurrency(amount)} from ${(record as Receivable).customerName}`,
-        user: 'Admin'
-      }, ...prev]);
-
+      addNotification({
+        title: t('Payment Received'),
+        message: `${formatCurrency(amount)} ${t('received from')} ${(record as Receivable).customerName}.`,
+        type: 'success',
+        module: 'accounting'
+      });
     } else {
       // Update Payable
-      setPayables(prev => prev.map(p => 
-        p.id === record.id 
-          ? { ...p, dueAmount: newDueAmount, paidAmount: newPaidAmount, status: newStatus } 
-          : p
-      ));
+      setPayables(prev => {
+        if (newDueAmount <= 0) {
+          return prev.filter(p => p.id !== record.id);
+        }
+        return prev.map(p => p.id === record.id ? { ...p, dueAmount: newDueAmount, paidAmount: newPaidAmount, status: newStatus } : p);
+      });
       
       // Add Expense Transaction
       const newTx: Transaction = {
         id: `TXN-${Date.now()}`,
         date: new Date().toISOString(),
-        type: 'purchase',
+        type: 'expense',
         amount: amount,
         description: `Payment made to ${(record as Payable).supplierName}`,
         category: 'Accounts Payable',
@@ -129,7 +134,6 @@ export function CreditBook({ onBack }: CreditBookProps) {
         paymentMethod
       };
       setTransactions(prev => [newTx, ...prev]);
-      
       // Log History
       setHistoryLogs(prev => [{
         id: `LOG-${Date.now()}`,
@@ -144,10 +148,10 @@ export function CreditBook({ onBack }: CreditBookProps) {
     // Notification
     addNotification({
       title: type === 'receivable' ? t('Payment Received') : t('Payment Made'),
-      message: type === 'receivable'
-        ? `${t('Received')} ${formatCurrency(amount)} ${t('from')} ${(record as Receivable).customerName}.`
-        : `${t('Paid')} ${formatCurrency(amount)} ${t('to')} ${(record as Payable).supplierName}.`,
-      type: 'success',
+      message: type === 'receivable' 
+        ? `${formatCurrency(amount)} ${t('received from')} ${(record as Receivable).customerName}.` 
+        : `${formatCurrency(amount)} ${t('paid to')} ${(record as Payable).supplierName}.`,
+      type: type === 'receivable' ? 'success' : 'info',
       module: 'accounting'
     });
 
@@ -255,7 +259,72 @@ export function CreditBook({ onBack }: CreditBookProps) {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800">
+            {(activeTab === 'receivables' ? filteredReceivables : filteredPayables).length > 0 ? (
+              (activeTab === 'receivables' ? filteredReceivables : filteredPayables).map((record: any) => {
+                const isExpanded = selectedRecord === record.id;
+                const isReceivable = activeTab === 'receivables';
+                const borderColor = isReceivable ? 'border-l-emerald-500' : 'border-l-rose-500';
+                const name = isReceivable ? record.customerName : record.supplierName;
+                
+                return (
+                  <div key={record.id} className="flex flex-col bg-white dark:bg-slate-900/40 transition-colors">
+                    <div 
+                      className={`border-l-4 ${borderColor} p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50`}
+                      onClick={() => setSelectedRecord(isExpanded ? null : record.id)}
+                    >
+                      <span className="font-semibold text-slate-900 dark:text-slate-50 text-sm truncate pr-2 flex-1">{name}</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-bold text-sm text-rose-600 dark:text-rose-400">{formatCurrency(record.dueAmount)}</span>
+                        <Button 
+                          size="sm" 
+                          variant={record.dueAmount > 0 ? 'default' : 'outline'}
+                          disabled={record.dueAmount <= 0}
+                          onClick={(e) => { e.stopPropagation(); openPaymentModal(isReceivable ? 'receivable' : 'payable', record); }}
+                          className={`h-7 px-3 text-[11px] ${record.dueAmount > 0 ? (isReceivable ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700") : ""}`}
+                        >
+                          {isReceivable ? t('Receive') : t('Pay')}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="p-4 border-l-4 border-l-slate-200 dark:border-l-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-sm">
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-3">
+                          <span>{new Date(record.date).toLocaleDateString()}</span>
+                          <span className="font-mono">{record.relatedEntityId}</span>
+                        </div>
+                        <div className="space-y-2 mb-3">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">{t('Total Amount')}:</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-50">{formatCurrency(record.totalAmount)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">{t('Paid')}:</span>
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(record.paidAmount)}</span>
+                          </div>
+                          <div className="flex justify-between font-bold">
+                            <span className="text-slate-700 dark:text-slate-300">{t('Due Balance')}:</span>
+                            <span className="text-rose-600 dark:text-rose-400">{formatCurrency(record.dueAmount)}</span>
+                          </div>
+                        </div>
+                        <div className="pt-3 border-t border-slate-200 dark:border-slate-800/50">
+                          {renderStatusBadge(record.status)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-slate-500 text-sm">
+                {activeTab === 'receivables' ? t('No receivables found.') : t('No payables found.')}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-500 dark:text-slate-400">
               <thead className="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
                 <tr>
